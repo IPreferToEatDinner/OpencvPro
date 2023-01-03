@@ -137,6 +137,10 @@
   <ItemGroup>
     <ClInclude Include="ImageFactory.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\testimg\fruits.jpg" />
+    <Image Include="..\testing\mir.jpg" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

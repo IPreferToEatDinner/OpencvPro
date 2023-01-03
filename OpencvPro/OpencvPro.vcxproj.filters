@@ -30,4 +30,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\testimg\fruits.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="..\testing\mir.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

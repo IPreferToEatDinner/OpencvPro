@@ -9,11 +9,9 @@ using namespace cv;
 
 
 ImageFactory::ImageFactory()
-{
-	std::cout << "此为工厂函数，遵循函数式编程原则，不会改变原矩阵，同时返回改变后的矩阵" << endl;
-}
+{}
 
-Mat ImageFactory::ReadImage(const char* path, const ImreadModes modes)
+ImageFactory ImageFactory::ReadImage(const char* path, const ImreadModes modes)
 {
 	Mat output = imread(path, modes);
 
@@ -25,16 +23,18 @@ Mat ImageFactory::ReadImage(const char* path, const ImreadModes modes)
 		exit(0);
 	}
 
-	return output;
+	this->matrixCopy = output;
+
+	return *this;
 }
 
-void ImageFactory::ShowImage(const Mat input)
+void ImageFactory::ShowImage()
 {
-	imshow("image", input);
+	imshow("image", this->matrixCopy);
 	waitKey(0);
 }
 
-Mat ImageFactory::Filter(const Mat input, const String mode)
+ImageFactory ImageFactory::Filter(const String mode)
 {
 	double laplacian[9] = {
 		0, -1, 0,
@@ -47,31 +47,30 @@ Mat ImageFactory::Filter(const Mat input, const String mode)
 		1 / 9.0, 1 / 9.0, 1 / 9.0 };
 
 	if (mode == "高通滤波") {
-		return this->Convolution(input, laplacian);
+		this->matrixCopy = this->Convolution(this->matrixCopy, laplacian);
 	}
 	else if (mode == "低通滤波")
 	{
-		return	this->Convolution(input, average);
+		this->matrixCopy = this->Convolution(this->matrixCopy, average);
 	}
 	else if (mode == "中值滤波") {
-		return this->Median(input);
+		this->matrixCopy = this->Median(this->matrixCopy);
 	}
 	else {
 		cerr << "滤波模式选择错误，没有这种滤波模式" << endl;
 		exit(0);
 	}
 
-
-	return this->matrixCopy;
+	return *this;
 }
 
-Mat ImageFactory::GrayTrans(const Mat input, const double alpha, const double beta)
+ImageFactory ImageFactory::GrayTrans(const double alpha, const double beta)
 {
 	//获取原图像的值和其他参数
-	unsigned char* pSrc = input.data;
-	int rows = input.rows;
-	int cols = input.cols;
-	int nchannels = input.channels();
+	unsigned char* pSrc = this->matrixCopy.data;
+	int rows = this->matrixCopy.rows;
+	int cols = this->matrixCopy.cols;
+	int nchannels = this->matrixCopy.channels();
 
 	Mat DstImg;
 	//如果不是 1 或者 3 通道就直接挂
@@ -79,7 +78,7 @@ Mat ImageFactory::GrayTrans(const Mat input, const double alpha, const double be
 		nchannels == 3 ? DstImg.create(rows, cols, CV_8UC3) : exit(0);
 
 	unsigned char* pDst = DstImg.data;
-	int record;
+	double record;
 
 	for (int i = 0; i < nchannels; i++)
 	{
@@ -102,10 +101,12 @@ Mat ImageFactory::GrayTrans(const Mat input, const double alpha, const double be
 		}
 	}
 
-	return DstImg;
+	this->matrixCopy = DstImg;
+
+	return *this;
 }
 
-double ImageFactory::CompareHist(const Mat image1, const Mat image2)
+double ImageFactory::CompareHist(ImageFactory image1, ImageFactory image2)
 {
 	// 计算模板图像的直方图
 	Mat hist1;
@@ -113,14 +114,14 @@ double ImageFactory::CompareHist(const Mat image1, const Mat image2)
 	int histSize[] = { 256 };
 	float range[] = { 0, 256 };
 	const float* ranges[] = { range };
-	calcHist(&image1, 1, channels, Mat(), hist1, 1, histSize, ranges, true, false);
+	calcHist(image1.getMatrix(), 1, channels, Mat(), hist1, 1, histSize, ranges, true, false);
 
 	// 规格化直方图
 	normalize(hist1, hist1, 0, 1, NORM_MINMAX, -1, Mat());
 
 	// 计算待匹配图像的直方图
 	Mat hist2;
-	calcHist(&image2, 1, channels, Mat(), hist2, 1, histSize, ranges, true, false);
+	calcHist(image2.getMatrix(), 1, channels, Mat(), hist2, 1, histSize, ranges, true, false);
 
 	// 规格化直方图
 	normalize(hist2, hist2, 0, 1, NORM_MINMAX, -1, Mat());
@@ -129,33 +130,31 @@ double ImageFactory::CompareHist(const Mat image1, const Mat image2)
 	return compareHist(hist1, hist2, HISTCMP_CORREL);
 }
 
-Mat ImageFactory::Binarization(const Mat input, const String mode)
+ImageFactory ImageFactory::Binarization(const String mode)
 {
 	Mat gray;
-	cvtColor(input, gray, COLOR_BGR2GRAY);
+	cvtColor(this->matrixCopy, gray, COLOR_BGR2GRAY);
 
 	if (mode == "状态法") {
-		//int limit = 128;
-		//threshold(gray, this->matrixCopy, limit, 255, cv::THRESH_BINARY);
-		//return this->matrixCopy;
-
-		return this->StateThresh(gray);
+		this->matrixCopy = this->StateThresh(gray);
 	}
 	else if (mode == "判断分析法") {
-		return this->OtsuThresh(gray);
+		this->matrixCopy = this->OtsuThresh(gray);
 	}
 	else
 	{
 		cerr << "输入的二值化模式不存在" << endl;
 		exit(0);
 	}
+
+	return *this;
 }
 
-Mat ImageFactory::Translation(const Mat input, const double x, double y)
+ImageFactory ImageFactory::Translation(const double x, const double y)
 {
-	int rows = input.rows;
-	int cols = input.cols;
-	int nchannels = input.channels();
+	int rows = this->matrixCopy.rows;
+	int cols = this->matrixCopy.cols;
+	int nchannels = this->matrixCopy.channels();
 
 	Mat DstImg;
 	//输出图像初始化
@@ -166,7 +165,7 @@ Mat ImageFactory::Translation(const Mat input, const double x, double y)
 		DstImg = Mat::zeros(rows, cols, CV_8UC3);
 	}
 
-	uchar* pSrc = input.data;
+	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
 
 	//构造平移变换矩阵
@@ -191,21 +190,23 @@ Mat ImageFactory::Translation(const Mat input, const double x, double y)
 				double dv = v - top, du = u - left;//坐标偏差值，即小数部分
 
 				for (int k = 0; k < nchannels; k++) {
-					pDst[(i * cols + j) * nchannels + k] = (1 - dv) * (1 - du) * pSrc[(top * input.cols + left) * nchannels + k] + (1 - dv) * du * pSrc[(top * input.cols + right) * nchannels + k] + dv * (1 - du) * pSrc[(bottom * input.cols + left) * nchannels + k] + dv * du * pSrc[(bottom * input.cols + right) * nchannels + k];
+					pDst[(i * cols + j) * nchannels + k] = (1 - dv) * (1 - du) * pSrc[(top * this->matrixCopy.cols + left) * nchannels + k] + (1 - dv) * du * pSrc[(top * this->matrixCopy.cols + right) * nchannels + k] + dv * (1 - du) * pSrc[(bottom * this->matrixCopy.cols + left) * nchannels + k] + dv * du * pSrc[(bottom * this->matrixCopy.cols + right) * nchannels + k];
 				}
 			}
 
 		}
 	}
 
-	return DstImg;
+	this->matrixCopy = DstImg;
+
+	return *this;
 }
 
-Mat ImageFactory::TransScale(const Mat input, const double x, const double y)
+ImageFactory ImageFactory::TransScale(const double x, const double y)
 {
-	int rows = round(input.rows * x);
-	int cols = round(input.cols * y);
-	int nchannels = input.channels();
+	int rows = round(this->matrixCopy.rows * x);
+	int cols = round(this->matrixCopy.cols * y);
+	int nchannels = this->matrixCopy.channels();
 
 	Mat DstImg;
 	//输出图像初始化
@@ -216,7 +217,7 @@ Mat ImageFactory::TransScale(const Mat input, const double x, const double y)
 		DstImg = Mat::zeros(rows, cols, CV_8UC3);
 	}
 
-	uchar* pSrc = input.data;
+	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
 
 	//构造缩放变换矩阵
@@ -232,13 +233,13 @@ Mat ImageFactory::TransScale(const Mat input, const double x, const double y)
 			double v = src_uv.at<double>(0, 1);//原图像的纵坐标，对应图像的行数
 
 			//双线性插值法
-			if (u >= 0 && v >= 0 && u <= input.cols - 1 && v <= input.rows - 1) {
+			if (u >= 0 && v >= 0 && u <= this->matrixCopy.cols - 1 && v <= this->matrixCopy.rows - 1) {
 				int top = floor(v), bottom = ceil(v), left = floor(u), right = ceil(u); //与映射到原图坐标相邻的四个像素点的坐标
 				double dv = v - top; //dv为坐标 行 的小数部分(坐标偏差)
 				double du = u - left; //du为坐标 列 的小数部分(坐标偏差)
 
 				for (int k = 0; k < nchannels; k++) {
-					pDst[(i * cols + j) * nchannels + k] = (1 - dv) * (1 - du) * pSrc[(top * input.cols + left) * nchannels + k] + (1 - dv) * du * pSrc[(top * input.cols + right) * nchannels + k] + dv * (1 - du) * pSrc[(bottom * input.cols + left) * nchannels + k] + dv * du * pSrc[(bottom * input.cols + right) * nchannels + k];
+					pDst[(i * cols + j) * nchannels + k] = (1 - dv) * (1 - du) * pSrc[(top * this->matrixCopy.cols + left) * nchannels + k] + (1 - dv) * du * pSrc[(top * this->matrixCopy.cols + right) * nchannels + k] + dv * (1 - du) * pSrc[(bottom * this->matrixCopy.cols + left) * nchannels + k] + dv * du * pSrc[(bottom * this->matrixCopy.cols + right) * nchannels + k];
 				}
 
 			}
@@ -246,15 +247,17 @@ Mat ImageFactory::TransScale(const Mat input, const double x, const double y)
 		}
 	}
 
-	return DstImg;
+	this->matrixCopy = DstImg;
+
+	return *this;
 }
 
-Mat ImageFactory::TransRotate(Mat const input, double theta)
+ImageFactory ImageFactory::TransRotate(double theta)
 {
 	theta = theta * CV_PI / 180;
-	int rows = round(fabs(input.rows * cos(theta)) + fabs(input.cols * sin(theta)));
-	int cols = round(fabs(input.cols * cos(theta)) + fabs(input.rows * sin(theta)));
-	int nchannels = input.channels();
+	int rows = round(fabs(this->matrixCopy.rows * cos(theta)) + fabs(this->matrixCopy.cols * sin(theta)));
+	int cols = round(fabs(this->matrixCopy.cols * cos(theta)) + fabs(this->matrixCopy.rows * sin(theta)));
+	int nchannels = this->matrixCopy.channels();
 
 	Mat DstImg;
 	//输出图像初始化
@@ -265,11 +268,11 @@ Mat ImageFactory::TransRotate(Mat const input, double theta)
 		DstImg = Mat::zeros(rows, cols, CV_8UC3);
 	}
 
-	uchar* pSrc = input.data;
+	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
 
 	//构造旋转变换矩阵
-	Mat T1 = (Mat_<double>(3, 3) << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -0.5 * input.cols, 0.5 * input.rows, 1.0);
+	Mat T1 = (Mat_<double>(3, 3) << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -0.5 * this->matrixCopy.cols, 0.5 * this->matrixCopy.rows, 1.0);
 	Mat T2 = (Mat_<double>(3, 3) << cos(theta), -sin(theta), 0.0, sin(theta), cos(theta), 0.0, 0.0, 0.0, 1.0);
 	double t3[3][3] = { { 1.0, 0.0, 0.0 },{ 0.0, -1.0, 0.0 },{ 0.5 * DstImg.cols, 0.5 * DstImg.rows ,1.0 } }; // 将数学笛卡尔坐标映射到旋转后的图像坐标
 	Mat T3 = Mat(3.0, 3.0, CV_64FC1, t3);
@@ -286,13 +289,13 @@ Mat ImageFactory::TransRotate(Mat const input, double theta)
 			double v = src_uv.at<double>(0, 1);//原图像的纵坐标，对应图像的行数
 
 			//双线性插值法
-			if (u >= 0 && v >= 0 && u <= input.cols - 1 && v <= input.rows - 1) {
+			if (u >= 0 && v >= 0 && u <= this->matrixCopy.cols - 1 && v <= this->matrixCopy.rows - 1) {
 				int top = floor(v), bottom = ceil(v), left = floor(u), right = ceil(u); //与映射到原图坐标相邻的四个像素点的坐标
 				double dv = v - top; //dv为坐标 行 的小数部分(坐标偏差)
 				double du = u - left; //du为坐标 列 的小数部分(坐标偏差)
 
 				for (int k = 0; k < nchannels; k++) {
-					pDst[(i * cols + j) * nchannels + k] = (1 - dv) * (1 - du) * pSrc[(top * input.cols + left) * nchannels + k] + (1 - dv) * du * pSrc[(top * input.cols + right) * nchannels + k] + dv * (1 - du) * pSrc[(bottom * input.cols + left) * nchannels + k] + dv * du * pSrc[(bottom * input.cols + right) * nchannels + k];
+					pDst[(i * cols + j) * nchannels + k] = (1 - dv) * (1 - du) * pSrc[(top * this->matrixCopy.cols + left) * nchannels + k] + (1 - dv) * du * pSrc[(top * this->matrixCopy.cols + right) * nchannels + k] + dv * (1 - du) * pSrc[(bottom * this->matrixCopy.cols + left) * nchannels + k] + dv * du * pSrc[(bottom * this->matrixCopy.cols + right) * nchannels + k];
 				}
 			}
 
@@ -300,7 +303,14 @@ Mat ImageFactory::TransRotate(Mat const input, double theta)
 		}
 	}
 
-	return DstImg;
+	this->matrixCopy = DstImg;
+
+	return *this;
+}
+
+Mat* ImageFactory::getMatrix(void)
+{
+	return &this->matrixCopy;
 }
 
 Mat ImageFactory::Convolution(const Mat input, const double* kernel)
@@ -318,8 +328,8 @@ Mat ImageFactory::Convolution(const Mat input, const double* kernel)
 
 	//结果的指针
 	unsigned char* pDst = DstImg.data;
-	int p1, p2, p3, p4, p5, p6, p7, p8, p9;
-	int record;
+	double p1, p2, p3, p4, p5, p6, p7, p8, p9;
+	double record;
 
 	for (int i = 0; i < nchannels; i++) {
 		for (int j = 1; j < rows - 1; j++) {//第一行和最后一行不作为模板中心处理
@@ -398,124 +408,158 @@ Mat ImageFactory::Median(const Mat input)
 
 Mat ImageFactory::OtsuThresh(const Mat SrcImg)
 {
-	Mat DstImg;
-	int rows = SrcImg.rows;
-	int cols = SrcImg.cols;
-
-	int pixelCount[256] = { 0 };//存储对应灰度像素的个数，灰度值和索引相对应
-	int threshold = 0;//threshold为阈值
-
-	DstImg.create(rows, cols, CV_8UC1);
-
-	uchar* pSrc = SrcImg.data;
-	uchar* pDst = DstImg.data;
-
-	//检索每一个灰度值，统计个数
-	for (int i = 0; i < rows; i++) {
-		for (int j = 0; j < cols; j++) {
-			pixelCount[(int)pSrc[i * cols + j]]++;
+	Mat img = SrcImg.clone();
+	int height = SrcImg.rows; //number of rows
+	int width = SrcImg.cols; //number of colums
+	int T = 0;//阈值
+	int countdata[256];//统计灰度值的数组
+	memset(countdata, 0, sizeof(countdata));//数组初始化
+	int w = 0; int w1 = 0; int w2 = 0;//像素总数，类1像素总数，类2像素总数
+	double d1 = 0.0; double d2 = 0.0; double d3 = 0.0; double d4 = 0.0; double max = 0.0;//类1间方差，类2间方差，类内方差，类间方差
+	double ip = 0.0; double ip1 = 0.0;//各灰度值与个数的乘积
+	double ratio = 0.0;//方差比值
+	int graymin = 255; int graymax = 0;
+	//统计各个灰度值像素数
+	for (int i = 0; i < height; i++)  //循环图像高度
+	{
+		for (int j = 0; j < width; j++)  //循环图像宽度
+		{
+			countdata[SrcImg.at<uchar>(i, j)]++;//统计灰度个数
+			if (SrcImg.at<uchar>(i, j) > graymax)graymax = SrcImg.at<uchar>(i, j);
+			if (SrcImg.at<uchar>(i, j) < graymin) graymin = SrcImg.at<uchar>(i, j);
+			if (graymin == 0)  graymin++;
 		}
 	}
-
-	double g0 = 0;
-
-	for (int t = 0; t < 256; t++) {
-		double w0 = 0, w1 = 0;
-		double u0 = 1, u1 = 0;
-		for (int i = 0; i < t; i++) {
-			w0 += pixelCount[i];//背景频率
-			u0 += i * pixelCount[i];//背景平均灰度
+	//计算像素总数与总灰度值
+	for (int k = graymin; k <= graymax; k++)
+	{
+		w += countdata[k];//像素总数
+		ip += (double)k * (double)countdata[k];//像素值与像素数的乘积
+	}
+	//求阈值
+	for (int k = graymin; k <= graymax; k++)
+	{
+		w1 += countdata[k];//类1像素总数
+		if (!w1)
+		{
+			continue;
 		}
-		if (w0 < 10e-30)u0 = 0;
-		else u0 /= w0;
-		w0 /= (rows * cols);
-
-		for (int j = t; j < 256; j++) {
-			w1 += pixelCount[j];//前景频率
-			u1 += j * pixelCount[j];//前景平均灰度
+		w2 = w - w1;//类2像素总数
+		if (w2 == 0)
+		{
+			break;
 		}
-		if (w1 < 10e-30)u1 = 0;
-		else u1 /= w1;
-		w1 /= (rows * cols);
+		ip1 += (double)k * countdata[k];
+		//计算类1均值
+		double  m1 = ip1 / w1;
+		//计算类1间方差
+		for (int n = graymin; n <= k; n++)
+		{
+			d1 += ((n - m1) * (n - m1) * countdata[n]);
+		}
+		//计算类2均值
+		double m2 = (ip - ip1) / w2;
+		//计算类2间方差
+		for (int m = k + 1; m <= graymax; m++)
+		{
+			d2 += ((m - m2) * (m - m2) * countdata[m]);
+		}
 
-		double g1 = w0 * w1 * (u1 - u0) * (u1 - u0);//类间方差
-
-		if (g1 > g0) {
-			g0 = g1;
-			threshold = t;//t为使最大类间方差的值
+		//计算类内方差
+		d3 = d1 * w1 + d2 * w2;
+		//计算类间方差
+		d4 = (double)w1 * (double)w2 * (m1 - m2) * (m1 - m2);
+		//类内方差与类间方差比值
+		if (d3 != 0)
+			ratio = d4 / d3;
+		if (ratio > max)
+		{
+			max = ratio;//找到比值最大值
+			T = k; //找到比值最大值时T的值 
 		}
 	}
-
-	for (int i = 0; i < rows; i++) {
-		for (int j = 0; j < cols; j++) {
-			if (pSrc[i * cols + j] > threshold)
-				pDst[i * cols + j] = 255;//前景
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			if (SrcImg.at<uchar>(i, j) > T)//利用阈值进行二值化
+				img.at<uchar>(i, j) = 255;
 			else
-				pDst[i * cols + j] = 0;//背景
+				img.at<uchar>(i, j) = 0;
 		}
 	}
 
-	return DstImg;
+	std::cout << "阈值为" << endl;
+	std::cout << T << endl;
+
+	return img;
 }
 
 Mat ImageFactory::StateThresh(const Mat SrcImg)
 {
-	Mat DstImg;
+	Mat img = SrcImg.clone();////复制矩阵头，且复制一份新数据，克隆
+	int height = SrcImg.rows; //number of rows
+	int width = SrcImg.cols; //number of colums
 
-	int rows = SrcImg.rows;
-	int cols = SrcImg.cols;
+	int countdata[256] = { 0 };
+	int graymax = 0; int graymin = 255;
+	for (int i = 0; i < height; i++)  //循环图像高度
+	{
+		for (int j = 0; j < width; j++)  //循环图像宽度
+		{
+			countdata[SrcImg.at<uchar>(i, j)]++;//统计灰度个数
+			if (SrcImg.at<uchar>(i, j) > graymax)graymax = SrcImg.at<uchar>(i, j);//找到灰度的最大最小值
+			if (SrcImg.at<uchar>(i, j) < graymin) graymin = SrcImg.at<uchar>(i, j);
+		}
+	}
+	int peak1 = 0; int peak2 = 0;
+	for (int i = 1; i <= 254; i++)//循环找出第一个波峰所对应的灰度值
+	{
+		if (countdata[i] > countdata[i - 1] && countdata[i] > countdata[i + 1])
+		{
+			peak1 = i;
+		}
+	}
+	for (int j = 254; j >= 1; j--)//循环找出第二个波峰对应的灰度值
+	{
+		if (countdata[j] > countdata[j - 1] && countdata[j] > countdata[j + 1])
+		{
 
-	int pixelCount[256] = { 0 };
-	int threshold = 0;
-
-	DstImg.create(rows, cols, CV_8UC1);
-
-	uchar* pSrc = SrcImg.data;
-	uchar* pDst = DstImg.data;
-
-	for (int i = 0; i < rows; i++) {
-		for (int j = 0; j < cols; j++) {
-			pixelCount[(int)pSrc[i * cols + j]]++;
+			if (peak1 != j)
+				peak2 = j;
 		}
 	}
 
-	int newthreshold;
-	newthreshold = (0 + 255) / 2;
-	int IterationTimes;
-	for (IterationTimes = 0; threshold != newthreshold && IterationTimes < 100; IterationTimes++) {
-		threshold = newthreshold;
-		double w0 = 0, w1 = 0;
-		double u0 = 1, u1 = 0;
-
-
-		for (int i = 0; i < threshold; i++) {
-			w0 += pixelCount[i];
-			u0 += i * pixelCount[i];
+	int valley = (peak1 + peak2) / 2;//找峰谷
+	if (countdata[valley] > countdata[valley + 1])//如果两个波峰的平均值比右边值大，说明波谷在右边
+	{
+		for (int i = valley; i < peak2; i++) //波谷向右找
+		{
+			if (countdata[i + 1] > countdata[i])
+				valley = i;
 		}
-		if (w0 < 10e-30)u0 = 0;
-		else u0 /= w0;
-		w0 /= (rows * cols);
-
-		for (int j = threshold + 1; j < 256; j++) {
-			w1 += pixelCount[j];
-			u1 += j * pixelCount[j];
-		}
-		if (w1 < 10e-30)u1 = 0;
-		else u1 /= w1;
-		w1 /= (rows * cols);
-
-		newthreshold = int((u1 + u0) / 2);
 	}
-
-	for (int i = 0; i < rows; i++) {
-		for (int j = 0; j < cols; j++) {
-			if (pSrc[i * cols + j] > threshold)
-				pDst[i * cols + j] = 255;
+	if (countdata[valley] > countdata[valley - 1])
+	{
+		for (int i = valley; i > peak1; i--)//波谷向左找
+		{
+			if (countdata[i] > countdata[i - 1])
+				valley = i;
+		}
+	}
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			if (SrcImg.at<uchar>(i, j) > valley)//二值化处理
+				img.at<uchar>(i, j) = 255;
 			else
-				pDst[i * cols + j] = 0;
+				img.at<uchar>(i, j) = 0;
 		}
 	}
+	cout << "阈值为" << endl;
+	cout << valley << endl;
 
-	return DstImg;
+	return img;
 }
 
