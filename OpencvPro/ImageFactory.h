@@ -36,8 +36,11 @@ public:
 	//图像旋转
 	ImageFactory TransRotate(double theta);
 
-	//得到内部矩阵
+	//得到内部矩阵的指针
 	Mat* getMatrix(void);
+
+	//色彩平衡
+	ImageFactory ColorBalance(void);
 
 private:
 	Mat matrixCopy;

@@ -32,6 +32,7 @@ void ImageFactory::ShowImage()
 {
 	imshow("image", this->matrixCopy);
 	waitKey(0);
+	destroyAllWindows();
 }
 
 ImageFactory ImageFactory::Filter(const String mode)
@@ -80,11 +81,14 @@ ImageFactory ImageFactory::GrayTrans(const double alpha, const double beta)
 	unsigned char* pDst = DstImg.data;
 	double record;
 
-	for (int i = 0; i < nchannels; i++)
+	//通道循环
+	for (int i = 0; i < nchannels; ++i)
 	{
-		for (int j = 0; j < rows; j++)
+		//横循环
+		for (int j = 0; j < rows; ++j)
 		{
-			for (int l = 0; l < cols; l++)
+			//纵循环
+			for (int l = 0; l < cols; ++l)
 			{
 				record = alpha * pSrc[(j * cols + l) * nchannels + i] + beta;
 
@@ -158,12 +162,8 @@ ImageFactory ImageFactory::Translation(const double x, const double y)
 
 	Mat DstImg;
 	//输出图像初始化
-	if (nchannels == 1) {
-		DstImg = Mat::zeros(rows, cols, CV_8UC1);
-	}
-	else if (nchannels == 3) {
-		DstImg = Mat::zeros(rows, cols, CV_8UC3);
-	}
+	nchannels == 1 ? DstImg = Mat::zeros(rows, cols, CV_8UC1) :
+		nchannels == 3 ? DstImg = Mat::zeros(rows, cols, CV_8UC3) : Mat();
 
 	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
@@ -178,11 +178,15 @@ ImageFactory ImageFactory::Translation(const double x, const double y)
 
 	for (int i = 0; i < rows; i++) {
 		for (int j = 0; j < cols; j++) {
-			Mat dst_xy = (Mat_<double>(1, 3) << j, i, 1);//第i行j列的像素坐标(j,i)
+			//第i行j列的像素坐标(j,i)
+			Mat dst_xy = (Mat_<double>(1, 3) << j, i, 1);
 			Mat src_uv = dst_xy * T_inv;
 
-			double u = src_uv.at<double>(0, 0);//原图像的横坐标，对应图像的列数
-			double v = src_uv.at<double>(0, 1);//原图像的纵坐标，对应图像的行数
+			//原图像的横坐标-->图像的列数
+			double u = src_uv.at<double>(0, 0);
+
+			//原图像的纵坐标-->图像的行数
+			double v = src_uv.at<double>(0, 1);
 
 			//双线性插值法
 			if (u >= 0 && v >= 0 && u <= cols - 1 && v <= rows - 1) {//判断对应的(u,v)是否在原图像范围内，即是否越界
@@ -209,13 +213,10 @@ ImageFactory ImageFactory::TransScale(const double x, const double y)
 	int nchannels = this->matrixCopy.channels();
 
 	Mat DstImg;
+
 	//输出图像初始化
-	if (nchannels == 1) {
-		DstImg = Mat::zeros(rows, cols, CV_8UC1);
-	}
-	else if (nchannels == 3) {
-		DstImg = Mat::zeros(rows, cols, CV_8UC3);
-	}
+	nchannels == 1 ? DstImg = Mat::zeros(rows, cols, CV_8UC1) :
+		nchannels == 3 ? DstImg = Mat::zeros(rows, cols, CV_8UC3) : Mat();
 
 	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
@@ -226,11 +227,14 @@ ImageFactory ImageFactory::TransScale(const double x, const double y)
 
 	for (int i = 0; i < rows; i++) {
 		for (int j = 0; j < cols; j++) {
-			Mat dst_xy = (Mat_<double>(1, 3) << j, i, 1);//第i行j列的像素坐标(j,i)
+			//第i行j列的像素坐标(j,i)
+			Mat dst_xy = (Mat_<double>(1, 3) << j, i, 1);
 			Mat src_uv = dst_xy * T_inv;
 
-			double u = src_uv.at<double>(0, 0);//原图像的横坐标，对应图像的列数
-			double v = src_uv.at<double>(0, 1);//原图像的纵坐标，对应图像的行数
+			//原图像的横坐标，对应图像的列数
+			double u = src_uv.at<double>(0, 0);
+			//原图像的纵坐标，对应图像的行数
+			double v = src_uv.at<double>(0, 1);
 
 			//双线性插值法
 			if (u >= 0 && v >= 0 && u <= this->matrixCopy.cols - 1 && v <= this->matrixCopy.rows - 1) {
@@ -261,20 +265,30 @@ ImageFactory ImageFactory::TransRotate(double theta)
 
 	Mat DstImg;
 	//输出图像初始化
-	if (nchannels == 1) {
-		DstImg = Mat::zeros(rows, cols, CV_8UC1);
-	}
-	else if (nchannels == 3) {
-		DstImg = Mat::zeros(rows, cols, CV_8UC3);
-	}
+	nchannels == 1 ? DstImg = Mat::zeros(rows, cols, CV_8UC1) :
+		nchannels == 3 ? DstImg = Mat::zeros(rows, cols, CV_8UC3) : Mat();
 
 	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
 
 	//构造旋转变换矩阵
-	Mat T1 = (Mat_<double>(3, 3) << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, -0.5 * this->matrixCopy.cols, 0.5 * this->matrixCopy.rows, 1.0);
-	Mat T2 = (Mat_<double>(3, 3) << cos(theta), -sin(theta), 0.0, sin(theta), cos(theta), 0.0, 0.0, 0.0, 1.0);
-	double t3[3][3] = { { 1.0, 0.0, 0.0 },{ 0.0, -1.0, 0.0 },{ 0.5 * DstImg.cols, 0.5 * DstImg.rows ,1.0 } }; // 将数学笛卡尔坐标映射到旋转后的图像坐标
+	Mat T1 = (Mat_<double>(3, 3) <<
+		1.0, 0.0, 0.0,
+		0.0, -1.0, 0.0,
+		-0.5 * this->matrixCopy.cols, 0.5 * this->matrixCopy.rows, 1.0);
+
+	Mat T2 = (Mat_<double>(3, 3) <<
+		cos(theta), -sin(theta), 0.0,
+		sin(theta), cos(theta), 0.0,
+		0.0, 0.0, 1.0);
+
+	double t3[3][3] = {
+		{ 1.0, 0.0, 0.0 },
+		{ 0.0, -1.0, 0.0 },
+		{ 0.5 * DstImg.cols, 0.5 * DstImg.rows ,1.0 }
+	}; // 将数学笛卡尔坐标映射到旋转后的图像坐标
+
+
 	Mat T3 = Mat(3.0, 3.0, CV_64FC1, t3);
 
 	Mat T = T1 * T2 * T3;
@@ -298,8 +312,6 @@ ImageFactory ImageFactory::TransRotate(double theta)
 					pDst[(i * cols + j) * nchannels + k] = (1 - dv) * (1 - du) * pSrc[(top * this->matrixCopy.cols + left) * nchannels + k] + (1 - dv) * du * pSrc[(top * this->matrixCopy.cols + right) * nchannels + k] + dv * (1 - du) * pSrc[(bottom * this->matrixCopy.cols + left) * nchannels + k] + dv * du * pSrc[(bottom * this->matrixCopy.cols + right) * nchannels + k];
 				}
 			}
-
-
 		}
 	}
 
@@ -311,6 +323,87 @@ ImageFactory ImageFactory::TransRotate(double theta)
 Mat* ImageFactory::getMatrix(void)
 {
 	return &this->matrixCopy;
+}
+
+ImageFactory ImageFactory::ColorBalance(void)
+{
+	Mat img = this->matrixCopy.clone();
+	int height = this->matrixCopy.rows;
+	int width = this->matrixCopy.cols;
+	double* Y = new double[height * width];//存图片亮度信息
+	double Ya = 0;
+	int i, j = 0; double Ymax = 0;
+
+	for (i = 0; i < height; i++)
+	{
+		for (j = 0; j < width; j++)
+		{
+			Y[i * width + j] = 0.299 * this->matrixCopy.at<Vec3b>(i, j)[2] + 0.587 * this->matrixCopy.at<Vec3b>(i, j)[1] + 0.114 * this->matrixCopy.at<Vec3b>(i, j)[0];//图像亮度分量
+			Ya += Y[i * width + j];
+			if (Ymax < Y[i * width + j])//图像亮度信息
+			{
+				Ymax = Y[i * width + j];
+			}
+		}
+	}
+
+	Ya = Ya / (height * width);//获取图像的平均亮度
+	double Ra = 0, Ga = 0, Ba = 0;
+
+	int num = 0;
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			if (Y[i * width + j] < (0.95 * Ymax))
+			{
+				Ra += this->matrixCopy.at<Vec3b>(i, j)[2];
+				Ga += this->matrixCopy.at<Vec3b>(i, j)[1];
+				Ba += this->matrixCopy.at<Vec3b>(i, j)[0];
+				num++;
+			}
+		}
+	}
+
+	//平均值化
+	Ra /= num;
+	Ga /= num;
+	Ba /= num;
+
+	//颜色均衡系数
+	double K[3];
+
+	//求三个颜色分量平均值最大值
+	double maxB = 0;
+	maxB = max(Ra, max(Ga, Ba));
+	K[0] = maxB / Ba;//RGB颜色均衡系数
+	K[1] = maxB / Ga;
+	K[2] = maxB / Ra;
+
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			for (int k = 0; k < 3; k++)
+			{
+				int temp = K[k] * this->matrixCopy.at<Vec3b>(i, j)[k];//平衡后的值等于平衡前的值乘以系数
+				if (temp < 0)
+				{//判断输出值是否在范围内
+					img.at<Vec3b>(i, j)[k] = 0;
+				}
+				else if (temp > 255)
+				{
+					img.at<Vec3b>(i, j)[k] = 255;
+				}
+				else
+					img.at<Vec3b>(i, j)[k] = temp;
+			}
+		}
+	}
+
+	this->matrixCopy = img;
+
+	return *this;
 }
 
 Mat ImageFactory::Convolution(const Mat input, const double* kernel)

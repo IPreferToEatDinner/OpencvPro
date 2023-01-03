@@ -36,7 +36,7 @@ int main()
 	system("cls");
 
 	//主界面
-	cout << "请选择要对此图像进行的操作，每次操作结束后均会展示图像，输入对应的阿拉伯数字即可\n" << endl << "\t①展示图像\t②图像滤波\t③灰度变换\t④直方图匹配\t⑤图像二值化\t⑥图像运动" << endl << endl << ">> " << flush;
+	cout << "请选择要对此图像进行的操作，每次操作结束后均会展示图像，输入对应的阿拉伯数字即可\n" << endl << "\t①展示图像\t②图像滤波\t③灰度变换\t④直方图匹配\t⑤图像二值化\t⑥图像运动\t⑦色彩平衡" << endl << endl << ">> " << flush;
 	cin >> flag;
 	system("cls");
 
@@ -98,6 +98,10 @@ int main()
 		instance.Translation(moveX, moveY).TransScale(scaleX, scaleY).TransRotate(theta).ShowImage();
 		break;
 
+	case 7:
+		cout << "你选择了色彩平衡，将会向你展示原图像和平衡后的图像" << endl;
+		instance.ColorBalance().ShowImage();
+		break;
 	default:
 		cerr << "输入了错误的数字" << endl;
 		exit(0);
@@ -105,7 +109,6 @@ int main()
 	}
 
 	//程序结束界面
-
 	system("cls");
 	cout << "计算完成，图像已关闭，程序退出" << endl;
 }
