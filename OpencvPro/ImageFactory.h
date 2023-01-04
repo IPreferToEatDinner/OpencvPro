@@ -16,7 +16,7 @@ public:
 	void ShowImage();
 
 	//实现滤波
-	ImageFactory Filter(const String mode);
+	ImageFactory Filter(const String mode, const double kernel[9] = nullptr);
 
 	//实现线性变换，alpha是斜率，beta是参数
 	ImageFactory GrayTrans(const double alpha, const double beta);

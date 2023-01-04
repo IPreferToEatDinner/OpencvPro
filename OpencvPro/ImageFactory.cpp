@@ -35,7 +35,7 @@ void ImageFactory::ShowImage()
 	destroyAllWindows();
 }
 
-ImageFactory ImageFactory::Filter(const String mode)
+ImageFactory ImageFactory::Filter(const String mode, const double kernel[9])
 {
 	double laplacian[9] = {
 		0, -1, 0,
@@ -47,7 +47,10 @@ ImageFactory ImageFactory::Filter(const String mode)
 		1 / 9.0, 1 / 9.0, 1 / 9.0,
 		1 / 9.0, 1 / 9.0, 1 / 9.0 };
 
-	if (mode == "高通滤波") {
+	if (kernel != nullptr) {
+		this->matrixCopy = this->Convolution(this->matrixCopy, kernel);
+	}
+	else if (mode == "高通滤波") {
 		this->matrixCopy = this->Convolution(this->matrixCopy, laplacian);
 	}
 	else if (mode == "低通滤波")
@@ -162,8 +165,8 @@ ImageFactory ImageFactory::Translation(const double x, const double y)
 
 	Mat DstImg;
 	//输出图像初始化
-	nchannels == 1 ? DstImg = Mat::zeros(rows, cols, CV_8UC1) :
-		nchannels == 3 ? DstImg = Mat::zeros(rows, cols, CV_8UC3) : Mat();
+	nchannels == 1 ? DstImg.create(rows, cols, CV_8UC1) :
+		nchannels == 3 ? DstImg.create(rows, cols, CV_8UC3) : exit(0);
 
 	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
@@ -215,8 +218,8 @@ ImageFactory ImageFactory::TransScale(const double x, const double y)
 	Mat DstImg;
 
 	//输出图像初始化
-	nchannels == 1 ? DstImg = Mat::zeros(rows, cols, CV_8UC1) :
-		nchannels == 3 ? DstImg = Mat::zeros(rows, cols, CV_8UC3) : Mat();
+	nchannels == 1 ? DstImg.create(rows, cols, CV_8UC1) :
+		nchannels == 3 ? DstImg.create(rows, cols, CV_8UC3) : exit(0);
 
 	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
@@ -265,8 +268,8 @@ ImageFactory ImageFactory::TransRotate(double theta)
 
 	Mat DstImg;
 	//输出图像初始化
-	nchannels == 1 ? DstImg = Mat::zeros(rows, cols, CV_8UC1) :
-		nchannels == 3 ? DstImg = Mat::zeros(rows, cols, CV_8UC3) : Mat();
+	nchannels == 1 ? DstImg.create(rows, cols, CV_8UC1) :
+		nchannels == 3 ? DstImg.create(rows, cols, CV_8UC3) : exit(0);
 
 	uchar* pSrc = this->matrixCopy.data;
 	uchar* pDst = DstImg.data;
