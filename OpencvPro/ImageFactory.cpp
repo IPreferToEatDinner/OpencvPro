@@ -28,11 +28,16 @@ ImageFactory ImageFactory::ReadImage(const char* path, const ImreadModes modes)
 	return *this;
 }
 
-void ImageFactory::ShowImage()
+void ImageFactory::ShowImage()const
 {
-	imshow("image", this->matrixCopy);
+	imshow("Result", this->matrixCopy);
 	waitKey(0);
 	destroyAllWindows();
+}
+
+void ImageFactory::ShowWithoutClose()const
+{
+	imshow("Row", this->matrixCopy);
 }
 
 ImageFactory ImageFactory::Filter(const String mode, const double kernel[9])
@@ -507,55 +512,73 @@ Mat ImageFactory::OtsuThresh(const Mat SrcImg)
 	Mat img = SrcImg.clone();
 	int height = SrcImg.rows; //number of rows
 	int width = SrcImg.cols; //number of colums
+
 	int T = 0;//阈值
-	int countdata[256];//统计灰度值的数组
-	memset(countdata, 0, sizeof(countdata));//数组初始化
-	int w = 0; int w1 = 0; int w2 = 0;//像素总数，类1像素总数，类2像素总数
-	double d1 = 0.0; double d2 = 0.0; double d3 = 0.0; double d4 = 0.0; double max = 0.0;//类1间方差，类2间方差，类内方差，类间方差
-	double ip = 0.0; double ip1 = 0.0;//各灰度值与个数的乘积
+	int countdata[256] = { 0 };//统计灰度值的数组
+
+
+	double ip = 0.0, ip1 = 0.0;//各灰度值与个数的乘积
 	double ratio = 0.0;//方差比值
-	int graymin = 255; int graymax = 0;
+	int graymin = 255, graymax = 0;
+
 	//统计各个灰度值像素数
 	for (int i = 0; i < height; i++)  //循环图像高度
 	{
 		for (int j = 0; j < width; j++)  //循环图像宽度
 		{
 			countdata[SrcImg.at<uchar>(i, j)]++;//统计灰度个数
-			if (SrcImg.at<uchar>(i, j) > graymax)graymax = SrcImg.at<uchar>(i, j);
-			if (SrcImg.at<uchar>(i, j) < graymin) graymin = SrcImg.at<uchar>(i, j);
-			if (graymin == 0)  graymin++;
+			if (SrcImg.at<uchar>(i, j) > graymax) {
+				graymax = SrcImg.at<uchar>(i, j);
+			}
+			if (SrcImg.at<uchar>(i, j) < graymin) {
+				graymin = SrcImg.at<uchar>(i, j);
+			}
+			if (graymin == 0) {
+				graymin++;
+			}
 		}
 	}
+
+	//像素总数，前景像素总数，后景像素总数
+	int w = 0, w1 = 0, w2 = 0;
 	//计算像素总数与总灰度值
 	for (int k = graymin; k <= graymax; k++)
 	{
 		w += countdata[k];//像素总数
 		ip += (double)k * (double)countdata[k];//像素值与像素数的乘积
 	}
+
+	//前景间方差，后景间方差，类内方差，类间方差
+	double d1 = 0.0, d2 = 0.0, d3 = 0.0, d4 = 0.0, max = 0.0;
+
 	//求阈值
 	for (int k = graymin; k <= graymax; k++)
 	{
-		w1 += countdata[k];//类1像素总数
-		if (!w1)
-		{
+		//前景像素总数
+		w1 += countdata[k];
+		if (!w1) {
 			continue;
 		}
-		w2 = w - w1;//类2像素总数
-		if (w2 == 0)
-		{
+
+		//后景像素总数
+		w2 = w - w1;
+		if (w2 == 0) {
 			break;
 		}
 		ip1 += (double)k * countdata[k];
-		//计算类1均值
+
+		//计算前景均值
 		double  m1 = ip1 / w1;
-		//计算类1间方差
-		for (int n = graymin; n <= k; n++)
-		{
+
+		//计算前景间方差
+		for (int n = graymin; n <= k; n++) {
 			d1 += ((n - m1) * (n - m1) * countdata[n]);
 		}
-		//计算类2均值
+
+		//计算后景均值
 		double m2 = (ip - ip1) / w2;
-		//计算类2间方差
+
+		//计算后景间方差
 		for (int m = k + 1; m <= graymax; m++)
 		{
 			d2 += ((m - m2) * (m - m2) * countdata[m]);
@@ -563,30 +586,34 @@ Mat ImageFactory::OtsuThresh(const Mat SrcImg)
 
 		//计算类内方差
 		d3 = d1 * w1 + d2 * w2;
+
 		//计算类间方差
 		d4 = (double)w1 * (double)w2 * (m1 - m2) * (m1 - m2);
+
 		//类内方差与类间方差比值
 		if (d3 != 0)
 			ratio = d4 / d3;
-		if (ratio > max)
-		{
+		if (ratio > max) {
 			max = ratio;//找到比值最大值
 			T = k; //找到比值最大值时T的值 
 		}
 	}
+
+	//利用阈值进行二值化
 	for (int i = 0; i < height; i++)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			if (SrcImg.at<uchar>(i, j) > T)//利用阈值进行二值化
+			if (SrcImg.at<uchar>(i, j) > T) {
 				img.at<uchar>(i, j) = 255;
-			else
+			}
+			else {
 				img.at<uchar>(i, j) = 0;
+			}
 		}
 	}
 
-	std::cout << "阈值为" << endl;
-	std::cout << T << endl;
+	cout << endl << "阈值为\033[32m" << T << "\033[0m" << endl;
 
 	return img;
 }
@@ -594,50 +621,57 @@ Mat ImageFactory::OtsuThresh(const Mat SrcImg)
 Mat ImageFactory::StateThresh(const Mat SrcImg)
 {
 	Mat img = SrcImg.clone();////复制矩阵头，且复制一份新数据，克隆
-	int height = SrcImg.rows; //number of rows
-	int width = SrcImg.cols; //number of colums
+	int height = SrcImg.rows;
+	int width = SrcImg.cols;
 
 	int countdata[256] = { 0 };
 	int graymax = 0; int graymin = 255;
-	for (int i = 0; i < height; i++)  //循环图像高度
+
+	for (int i = 0; i < height; i++)
 	{
-		for (int j = 0; j < width; j++)  //循环图像宽度
+		for (int j = 0; j < width; j++)
 		{
-			countdata[SrcImg.at<uchar>(i, j)]++;//统计灰度个数
-			if (SrcImg.at<uchar>(i, j) > graymax)graymax = SrcImg.at<uchar>(i, j);//找到灰度的最大最小值
-			if (SrcImg.at<uchar>(i, j) < graymin) graymin = SrcImg.at<uchar>(i, j);
+			//统计灰度个数
+			countdata[SrcImg.at<uchar>(i, j)]++;
+			if (SrcImg.at<uchar>(i, j) > graymax) { graymax = SrcImg.at<uchar>(i, j); }
+			if (SrcImg.at<uchar>(i, j) < graymin) { graymin = SrcImg.at<uchar>(i, j); }
 		}
 	}
+
 	int peak1 = 0; int peak2 = 0;
-	for (int i = 1; i <= 254; i++)//循环找出第一个波峰所对应的灰度值
+
+	//循环找出第一个波峰所对应的灰度值
+	for (int i = 1; i <= 254; i++)
 	{
-		if (countdata[i] > countdata[i - 1] && countdata[i] > countdata[i + 1])
-		{
+		if (countdata[i] > countdata[i - 1] && countdata[i] > countdata[i + 1]) {
 			peak1 = i;
 		}
 	}
-	for (int j = 254; j >= 1; j--)//循环找出第二个波峰对应的灰度值
-	{
+
+	//循环找出第二个波峰对应的灰度值
+	for (int j = 254; j >= 1; j--) {
 		if (countdata[j] > countdata[j - 1] && countdata[j] > countdata[j + 1])
 		{
-
 			if (peak1 != j)
 				peak2 = j;
 		}
 	}
+	//找峰谷
+	int valley = (peak1 + peak2) / 2;
 
-	int valley = (peak1 + peak2) / 2;//找峰谷
-	if (countdata[valley] > countdata[valley + 1])//如果两个波峰的平均值比右边值大，说明波谷在右边
-	{
-		for (int i = valley; i < peak2; i++) //波谷向右找
+	//如果两个波峰的平均值比右边值大，说明波谷在右边
+	if (countdata[valley] > countdata[valley + 1]) {
+		//波谷向右找
+		for (int i = valley; i < peak2; i++)
 		{
 			if (countdata[i + 1] > countdata[i])
 				valley = i;
 		}
 	}
-	if (countdata[valley] > countdata[valley - 1])
-	{
-		for (int i = valley; i > peak1; i--)//波谷向左找
+
+	if (countdata[valley] > countdata[valley - 1]) {
+		//波谷向左找
+		for (int i = valley; i > peak1; i--)
 		{
 			if (countdata[i] > countdata[i - 1])
 				valley = i;
@@ -647,15 +681,17 @@ Mat ImageFactory::StateThresh(const Mat SrcImg)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			if (SrcImg.at<uchar>(i, j) > valley)//二值化处理
+			//二值化处理
+			if (SrcImg.at<uchar>(i, j) > valley) {
 				img.at<uchar>(i, j) = 255;
-			else
+			}
+			else {
 				img.at<uchar>(i, j) = 0;
+			}
 		}
 	}
-	cout << "阈值为" << endl;
-	cout << valley << endl;
+
+	cout << endl << "阈值为\033[32m" << valley << "\033[0m" << endl;
 
 	return img;
 }
-

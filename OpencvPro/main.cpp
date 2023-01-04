@@ -52,6 +52,7 @@ int main()
 				<< endl << endl << "注意：\n\t高通滤波默认使用的是空间域 3*3 拉普拉斯算子\n\t低通滤波默认使用空间域平均算子"
 				<< endl << endl << ">> " << flush;
 			cin >> flag;
+			stableOne.ShowWithoutClose();
 			if (flag == "1") {
 				instance.Filter("高通滤波").ShowImage();
 			}
@@ -81,6 +82,7 @@ int main()
 			cout << "你选择了灰度线性变换，其原理是将图像各个通道每个像素的灰度按照\033[32m y = kx + b \033[0m的形式实现映射，同时将灰度控制在量化位数所能接受的灰度级之内"
 				<< endl << endl << "请输入 k 和 b 的值" << endl << endl << ">> " << flush;
 			cin >> k >> b;
+			stableOne.ShowWithoutClose();
 			instance.GrayTrans(k, b).ShowImage();
 			break;
 
@@ -96,6 +98,7 @@ int main()
 			cout << "你选择了图像二值化，我们提供状态法和判断分析法，请选择\n\n\t①状态法\t\t②判断分析法"
 				<< endl << endl << ">> " << flush;
 			cin >> flag;
+			stableOne.ShowWithoutClose();
 			flag == "1" ? instance.Binarization("状态法").ShowImage() :
 				flag == "2" ? instance.Binarization("判断分析法").ShowImage() : exit(0);
 			break;
@@ -109,11 +112,13 @@ int main()
 				<< "\n\ttheta 是角度 ，范围是 [0,360]"
 				<< endl << endl << ">> " << flush;
 			cin >> moveX >> moveY >> scaleX >> scaleY >> theta;
+			stableOne.ShowWithoutClose();
 			instance.Translation(moveX, moveY).TransScale(scaleX, scaleY).TransRotate(theta).ShowImage();
 			break;
 
 		case 7:
 			cout << "你选择了色彩平衡，将会向你展示原图像和平衡后的图像" << endl;
+			stableOne.ShowWithoutClose();
 			instance.ColorBalance().ShowImage();
 			break;
 		default:

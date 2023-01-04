@@ -13,7 +13,10 @@ public:
 	ImageFactory ReadImage(const char* path, const ImreadModes modes);
 
 	//展示图像
-	void ShowImage();
+	void ShowImage()const;
+
+	//展示图像但不关闭
+	void ShowWithoutClose()const;
 
 	//实现滤波
 	ImageFactory Filter(const String mode, const double kernel[9] = nullptr);
